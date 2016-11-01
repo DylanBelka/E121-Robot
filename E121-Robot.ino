@@ -98,8 +98,11 @@ void interrupt1()
 
 void handleInterrupt()
 {
+  const unsigned int rightBumper = 2;
+  const unsigned int leftBumper = 3;
+  
   pause(5);
-  if (readInput(2) == 1 && readInput(3) == 1)
+  if (readInput(leftBumper) == 1 && readInput(rightBumper) == 1)
   {
     return;
   }
@@ -113,16 +116,17 @@ void handleInterrupt()
     pause(oneInch * 2); // move back 2 inches
 
     // now rotate depending on bumper hit ~20-30degrees
-    if (readInput(2) == 0) // TODO: determine if this is left or right bumper
-        // for now assume this is left
+    if (readInput(leftBumper) == 0)
     {
       turnRight();
       pause(oneDegree * 20);
+      Serial.println("left bumper hit");
     }
-    else if (readInput(3) == 0) // TODO: determine if this is left or right bumper
+    else if (readInput(rightBumper) == 0)
     {
       turnLeft();
       pause(oneDegree * 20);
+      Serial.println("right bumper hit");
     }
   }
 }
@@ -143,7 +147,5 @@ void loop()
   pause(oneDegree * 180);
   halt();
   pause(1000);
-  
-
 }
 
