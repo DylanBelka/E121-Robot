@@ -1,6 +1,8 @@
 #include <SendOnlySoftwareSerial.h>
 #include <ArduinoInit.h>
 
+#define DEBUG
+
 /// motor 1 is the one on the right
 #define MOTOR_1_SPEED 50
 #define MOTOR_2_SPEED 54
@@ -100,9 +102,11 @@ void handleInterrupt()
 {
   const unsigned int rightBumper = 2;
   const unsigned int leftBumper = 3;
+  unsigned int leftBumperStat;
+  unsigned int rightBumperStat;
   
   pause(5);
-  if (readInput(leftBumper) == 1 && readInput(rightBumper) == 1)
+  if ((leftBumperStat = readInput(leftBumper)) == 1 && (rightBumperStat = readInput(rightBumper)) == 1)
   {
     return;
   }
@@ -110,26 +114,48 @@ void handleInterrupt()
   motors('b', 'o', 0);
   pause(100);
 
-  while(readInput(2) == 0 || readInput(3) == 0) // while bumper is hit
+  // while bumper is hit, store left+right bumper status upon first check
+  // this guarentees that the robot will rotate in the proper direction AFTER backing up
+  while((leftBumperStat = readInput(leftBumper)) == 0 || (rightBumperStat = readInput(rightBumper)) == 0)
   {
     backward();
-    pause(oneInch * 2); // move back 2 inches
+    pause(oneInch * 4); // move back 4 inches
 
-    // now rotate depending on bumper hit ~20-30degrees
-    if (readInput(leftBumper) == 0)
+    // now rotate depending on bumper hit 45 degrees
+    if (leftBumperStat == 0)
     {
       turnRight();
-      pause(oneDegree * 20);
+      pause(oneDegree * 45);
       Serial.println("left bumper hit");
     }
-    else if (readInput(rightBumper) == 0)
+    else if (rightBumperStat == 0)
     {
       turnLeft();
-      pause(oneDegree * 20);
+      pause(oneDegree * 45);
       Serial.println("right bumper hit");
     }
+#ifdef DEBUG
+    else // not sure what this status would mean if the interrupt triggered
+    {
+      Serial.print("handleInterrupt() branches of rotation fell through. leftBumperStat = ");
+      Serial.print(leftBumperStat);
+      Serial.print(" rightBumperStat = ");
+      Serial.println(rightBumperStat);
+    }
+#endif // DEBUG
   }
 }
+
+#ifdef DEBUG
+void testSensor(byte sensor)
+{
+  unsigned int sensorVal = readADC(sensor);
+  Serial.print("sensor #");
+  Serial.print(sensor);
+  Serial.print(" ");
+  Serial.println(sensorVal);
+}
+#endif // DEBUG
 
 void loop()
 {
@@ -143,9 +169,13 @@ void loop()
     Serial.println("on white side");
   }
 
-  turnLeft();
-  pause(oneDegree * 180);
-  halt();
+  testSensor(1);
+  testSensor(2);
+  testSensor(4);
+  testSensor(0);
+
+  Serial.println("\n");
+
   pause(1000);
 }
 
