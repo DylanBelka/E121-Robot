@@ -4,44 +4,45 @@
 #define DEBUG
 
 /// motor 1 is the one on the right
-#define MOTOR_1_SPEED 50
-#define MOTOR_2_SPEED 54
+const int rightMotorSpeed = 50;
+const int leftMotorSpeed = 54;
 
-#define rightMotor 1
-#define leftMotor 2
+const unsigned int rightMotor = 1;
+const unsigned int leftMotor = 2;
 
-#define sideWhite 0
-#define sideBlack 1
+const unsigned int sideWhite = 0;
+const unsigned int sideBlack = 1;
 
-#define oneFoot 1400 // 1 foot ~ 1400ms of movement
-#define oneInch (oneFoot / 12)
-#define oneDegree 3
+// values approximated by moving/rotating and measuring approx how far the robot moved/rotated in 1 second
+const unsigned int oneFoot = 1400; // 1 foot ~ 1400ms of movement
+const unsigned int oneInch = (oneFoot / 12);
+const unsigned int oneDegree = 3;
 
 const int fsmLEDPin = 8;
 const int fsmSensorPin = 3;
 
 void forward()
 {
-  motors(rightMotor, 'a', MOTOR_1_SPEED);
-  motors(leftMotor, 'b', MOTOR_2_SPEED);
+  motors(rightMotor, 'a', rightMotorSpeed); // one of the motors is "backwards" so opposite directions are needed
+  motors(leftMotor, 'b', leftMotorSpeed);
 }
 
 void backward()
 {
-  motors(rightMotor, 'b', MOTOR_1_SPEED);
-  motors(leftMotor, 'a', MOTOR_2_SPEED);
+  motors(rightMotor, 'b', rightMotorSpeed);
+  motors(leftMotor, 'a', leftMotorSpeed);
 }
 
 void turnLeft()
 {
-  motors(rightMotor, 'a', MOTOR_1_SPEED);
-  motors(leftMotor, 'a', MOTOR_2_SPEED);
+  motors(rightMotor, 'a', rightMotorSpeed);
+  motors(leftMotor, 'a', leftMotorSpeed);
 }
 
 void turnRight()
 {
-  motors(rightMotor, 'b', MOTOR_1_SPEED);
-  motors(leftMotor, 'b', MOTOR_2_SPEED);
+  motors(rightMotor, 'b', rightMotorSpeed);
+  motors(leftMotor, 'b', leftMotorSpeed);
 }
 
 void halt()
@@ -63,11 +64,11 @@ int detectCurrentSide()
   outputHigh(fsmLEDPin);
   pause(100);
   unsigned int fsmReading = readADC(fsmSensorPin);
-  if (fsmReading > sideWhiteLow && fsmReading < sideWhiteHigh)
+  if (fsmReading > sideWhiteLow && fsmReading < sideWhiteHigh) // white side?
   {
     return sideWhite;
   }
-  else if (fsmReading > sideBlackLow && fsmReading < sideBlackHigh)
+  else if (fsmReading > sideBlackLow && fsmReading < sideBlackHigh) // black side?
   {
     return sideBlack;
   }
@@ -80,7 +81,8 @@ int detectCurrentSide()
   }
 }
 
-void setup() {
+void setup() 
+{
   configArduino();
   attachInterrupt(0, interrupt0, LOW);
   attachInterrupt(1, interrupt1, LOW);
