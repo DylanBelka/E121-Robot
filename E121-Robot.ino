@@ -3,6 +3,8 @@
 
 #define DEBUG
 
+/***** CONSTANTS ******/
+
 /// motor 1 is the one on the right
 const int rightMotorSpeed = 50;
 const int leftMotorSpeed = 54;
@@ -16,10 +18,118 @@ const unsigned int sideBlack = 1;
 // values approximated by moving/rotating and measuring approx how far the robot moved/rotated in 1 second
 const unsigned int oneFoot = 1400; // 1 foot ~ 1400ms of movement
 const unsigned int oneInch = (oneFoot / 12);
-const unsigned int oneDegree = 3;
+const unsigned int twoDegrees = 7; // two degrees = 7 milliseconds (one degree ~ 3.5 millis)
 
-const int fsmLEDPin = 8;
-const int fsmSensorPin = 3;
+const unsigned int fsmLEDPin = 8;
+const unsigned int fsmSensorPin = 3;
+const unsigned int navLightSensor = 0;
+const unsigned int leftLightSensor = 1;
+const unsigned int centerLightSensor = 2;
+const unsigned int rightLightSensor = 4;
+
+/***** GLOBAL VARIABLES *****/
+static unsigned int startingSide;
+
+/*
+ *  Detects current side and returns 1 for black and 0 for white
+ *  returns -1 if the returned light value is not within range and prints val
+ */
+unsigned int detectCurrentSide()
+{
+  const int sideWhiteLow = 3000;  // lower bound of white side values
+  const int sideWhiteHigh = 5000; // upper bound
+  const int sideBlackLow = 15000;
+  const int sideBlackHigh = 18000;
+
+  outputHigh(fsmLEDPin);
+  pause(100);
+  unsigned int fsmReading = readADC(fsmSensorPin);
+  if (fsmReading > sideWhiteLow && fsmReading < sideWhiteHigh) // white side?
+  {
+    return sideWhite;
+  }
+  else if (fsmReading > sideBlackLow && fsmReading < sideBlackHigh) // black side?
+  {
+    return sideBlack;
+  }
+  else
+  {
+    Serial.print("SIDE UNKNOWN\nReading: ");
+    Serial.println(fsmReading);
+    Serial.println();
+    return -1;
+  }
+}
+
+unsigned int readNavLightSensor()
+{
+  return readADC(navLightSensor);  
+}
+
+
+void setup() 
+{
+  configArduino();
+  attachInterrupt(0, interrupt0, LOW);
+  attachInterrupt(1, interrupt1, LOW);
+  motors(1, 'o', 0);
+  motors(2, 'o', 0);
+  startingSide = detectCurrentSide(); // what is our home side?
+}
+
+#ifdef DEBUG
+void testSensor(byte sensor)
+{
+  unsigned int sensorVal = readADC(sensor);
+  Serial.print("sensor #");
+  Serial.print(sensor);
+  Serial.print(" ");
+  Serial.println(sensorVal);
+}
+#endif // DEBUG
+
+void loop()
+{
+  unsigned int currentSide = 4;
+  if (startingSide != currentSide)
+  {
+    unsigned int degreesRotated = 0;
+    unsigned int bestNavLightSensorReadingAngle = 0;
+    unsigned int bestNavLightSensorReading = readNavLightSensor();
+    while (degreesRotated < 360)
+    {
+      // TODO: test this method further
+  
+      // the general idea here is to rotate the robot until the reading of the light sensor is at its greatest
+      // then move in that direction
+      turnLeft();
+      pause(twoDegrees);
+      halt();
+      pause(5);
+      degreesRotated += 2;
+      // problem is somethiung with the angle not being updated for all degrees leading up to the best angle
+      // two arrays?
+      
+      unsigned int newNavLightSensorReading = readNavLightSensor();
+      if (newNavLightSensorReading < bestNavLightSensorReading) // the new direction is better than the current best
+      {
+        bestNavLightSensorReading = newNavLightSensorReading;
+        bestNavLightSensorReadingAngle = degreesRotated;
+      }
+    }
+    // finally rotate back to the "best" angle
+    turnLeft();
+    pause(bestNavLightSensorReadingAngle / 2 * twoDegrees);
+    Serial.print("bestnavlightsensorrading angle = ");
+    Serial.println(bestNavLightSensorReadingAngle);
+    halt();
+    pause(5000);
+  }
+}
+
+/***** SUBROUTINES *****/
+
+/***** MOVEMENT SUBROUTINES *****/
 
 void forward()
 {
@@ -50,45 +160,7 @@ void halt()
   motors('b', 'o', 0);
 }
 
-/*
- *  Detects current side and returns 1 for black and 0 for white
- *  returns -1 if the returned light value is not within range and prints val
- */
-int detectCurrentSide()
-{
-  const int sideWhiteLow = 3000;  // lower bound of white side values
-  const int sideWhiteHigh = 5000; // upper bound
-  const int sideBlackLow = 15000;
-  const int sideBlackHigh = 18000;
-
-  outputHigh(fsmLEDPin);
-  pause(100);
-  unsigned int fsmReading = readADC(fsmSensorPin);
-  if (fsmReading > sideWhiteLow && fsmReading < sideWhiteHigh) // white side?
-  {
-    return sideWhite;
-  }
-  else if (fsmReading > sideBlackLow && fsmReading < sideBlackHigh) // black side?
-  {
-    return sideBlack;
-  }
-  else
-  {
-    Serial.print("SIDE UNKNOWN\nReading: ");
-    Serial.println(fsmReading);
-    Serial.println();
-    return -1;
-  }
-}
-
-void setup() 
-{
-  configArduino();
-  attachInterrupt(0, interrupt0, LOW);
-  attachInterrupt(1, interrupt1, LOW);
-  motors(1, 'o', 0);
-  motors(2, 'o', 0);
-}
+/***** INTERRUPT SUBROUTINES *****/
 
 void interrupt0()
 {
@@ -127,13 +199,13 @@ void handleInterrupt()
     if (leftBumperStat == 0)
     {
       turnRight();
-      pause(oneDegree * 45);
+      pause(twoDegrees * 15);
       Serial.println("left bumper hit");
     }
     else if (rightBumperStat == 0)
     {
       turnLeft();
-      pause(oneDegree * 45);
+      pause(twoDegrees * 15);
       Serial.println("right bumper hit");
     }
 #ifdef DEBUG
@@ -146,38 +218,5 @@ void handleInterrupt()
     }
 #endif // DEBUG
   }
-}
-
-#ifdef DEBUG
-void testSensor(byte sensor)
-{
-  unsigned int sensorVal = readADC(sensor);
-  Serial.print("sensor #");
-  Serial.print(sensor);
-  Serial.print(" ");
-  Serial.println(sensorVal);
-}
-#endif // DEBUG
-
-void loop()
-{
-  int currentSide = detectCurrentSide();
-  if (currentSide == sideBlack)
-  {
-    Serial.println("on black side");
-  }
-  else if (currentSide == sideWhite)
-  {
-    Serial.println("on white side");
-  }
-
-  testSensor(1);
-  testSensor(2);
-  testSensor(4);
-  testSensor(0);
-
-  Serial.println("\n");
-
-  pause(1000);
 }
 
