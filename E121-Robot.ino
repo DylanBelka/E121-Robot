@@ -94,36 +94,45 @@ void loop()
   if (startingSide != currentSide)
   {
     unsigned int degreesRotated = 0;
-    unsigned int bestNavLightSensorReadingAngle = 0;
-    unsigned int bestNavLightSensorReading = readNavLightSensor();
-    while (degreesRotated < 360)
-    {
-      // TODO: test this method further
-  
-      // the general idea here is to rotate the robot until the reading of the light sensor is at its greatest
-      // then move in that direction
-      turnLeft();
-      pause(twoDegrees);
-      halt();
-      pause(5);
-      degreesRotated += 2;
-      // problem is somethiung with the angle not being updated for all degrees leading up to the best angle
-      // two arrays?
-      
-      unsigned int newNavLightSensorReading = readNavLightSensor();
-      if (newNavLightSensorReading < bestNavLightSensorReading) // the new direction is better than the current best
-      {
-        bestNavLightSensorReading = newNavLightSensorReading;
-        bestNavLightSensorReadingAngle = degreesRotated;
-      }
-    }
-    // finally rotate back to the "best" angle
-    turnLeft();
-    pause(bestNavLightSensorReadingAngle / 2 * twoDegrees);
-    Serial.print("bestnavlightsensorrading angle = ");
-    Serial.println(bestNavLightSensorReadingAngle);
-    halt();
-    pause(5000);
+	unsigned int bestNavLightSensorReadingAngle = 0;	// angle to rotate back to once the "best"/brightest
+														// angle has been found
+	unsigned int bestNavLightSensorReading = readNavLightSensor(); // "best"/brightest nav light sensor found so far
+	while (degreesRotated < 360)
+	{
+		turnLeft();
+		pause(twoDegrees);
+		halt();
+		pause(5);
+		degreesRotated += 2;
+		
+		unsigned int newNavLightSensorReading = readNavLightSensor();
+#ifdef DEBUG
+		Serial.print("newNavLightSensorReading = ");
+		Serial.println(newNavLightSensorReading);
+#endif // DEBUG
+		if (newNavLightSensorReading < bestNavLightSensorReading) // is new reading brighter than previous best?
+		{
+#ifdef DEBUG
+			Serial.print("new best navLightSensorReading found = ");
+			Serial.print(newNavLightSensorReading);
+			Serial.print(" previous = ");
+			Serial.println(bestNavLightSensorReading);
+#endif // DEBUG
+			bestNavLightSensorReading = newNavLightSensorReading;
+			bestNavLightSensorReadingAngle = degreesRotated;
+		}
+	}
+	turnLeft();
+	pause(bestNavLightSensorReadingAngle / 2 * twoDegrees);
+#ifdef DEBUG
+	Serial.print("bestNavLightSensorReadingAngle = ");
+	Serial.println(bestNavLightSensorReadingAngle);
+	Serial.print("degreesRotated = ");
+	Serial.println(degreesRotated);
+	Serial.println("\n\nNEXT TRIAL\n");
+	halt();
+	pause(5000);
+#endif // DEBUG
   }
 }
 
