@@ -90,40 +90,41 @@ void testSensor(byte sensor)
 
 void loop()
 {
-  unsigned int currentSide = 4;
+  unsigned int currentSide = 41324232;
   if (startingSide != currentSide)
   {
     unsigned int degreesRotated = 0;
-	unsigned int bestNavLightSensorReadingAngle = 0;	// angle to rotate back to once the "best"/brightest
+	  unsigned int bestNavLightSensorReadingAngle = 0;	// angle to rotate back to once the "best"/brightest
 														// angle has been found
-	unsigned int bestNavLightSensorReading = readNavLightSensor(); // "best"/brightest nav light sensor found so far
-	while (degreesRotated < 360)
-	{
-		turnLeft();
-		pause(twoDegrees);
-		halt();
-		pause(5);
-		degreesRotated += 2;
+	  unsigned int bestNavLightSensorReading = readNavLightSensor(); // "best"/brightest nav light sensor found so far
+	  while (degreesRotated < 360)
+	  {
+		  turnLeft();
+		  pause(twoDegrees);
+		  halt();
+		  pause(5);
+		  degreesRotated += 2;
 		
-		unsigned int newNavLightSensorReading = readNavLightSensor();
+		  unsigned int newNavLightSensorReading = readNavLightSensor();
 #ifdef DEBUG
-		Serial.print("newNavLightSensorReading = ");
-		Serial.println(newNavLightSensorReading);
+		  Serial.print("newNavLightSensorReading = ");
+		  Serial.println(newNavLightSensorReading);
 #endif // DEBUG
-		if (newNavLightSensorReading < bestNavLightSensorReading) // is new reading brighter than previous best?
-		{
+		  if (newNavLightSensorReading < bestNavLightSensorReading) // is new reading brighter than previous best?
+		  {
 #ifdef DEBUG
-			Serial.print("new best navLightSensorReading found = ");
-			Serial.print(newNavLightSensorReading);
-			Serial.print(" previous = ");
-			Serial.println(bestNavLightSensorReading);
+			  Serial.print("new best navLightSensorReading found = ");
+			  Serial.print(newNavLightSensorReading);
+			  Serial.print(" previous = ");
+			  Serial.println(bestNavLightSensorReading);
 #endif // DEBUG
-			bestNavLightSensorReading = newNavLightSensorReading;
-			bestNavLightSensorReadingAngle = degreesRotated;
-		}
+			  bestNavLightSensorReading = newNavLightSensorReading;
+			  bestNavLightSensorReadingAngle = degreesRotated;
+		  }
 	}
 	turnLeft();
 	pause(bestNavLightSensorReadingAngle / 2 * twoDegrees);
+ 
 #ifdef DEBUG
 	Serial.print("bestNavLightSensorReadingAngle = ");
 	Serial.println(bestNavLightSensorReadingAngle);
@@ -131,9 +132,56 @@ void loop()
 	Serial.println(degreesRotated);
 	Serial.println("\n\nNEXT TRIAL\n");
 	halt();
-	pause(5000);
+	pause(10000);
 #endif // DEBUG
   }
+
+  // we are now on the enemy's side
+  // move toward target light
+  // figure out best way to move using 3 target light sensors
+  unsigned int leftTargetLightSensorReading = readADC(leftLightSensor);
+  unsigned int rightTargetLightSensorReading = readADC(rightLightSensor);
+  unsigned int centerTargetLightSensorReading = readADC(centerLightSensor);
+
+#ifdef DEBUG
+  Serial.print("center reading = ");
+  Serial.print(centerTargetLightSensorReading);
+  Serial.print("   left reading = ");
+  Serial.print(leftTargetLightSensorReading);
+  Serial.print("   right reading = ");
+  Serial.println(rightTargetLightSensorReading);
+#endif // DEBUG
+/*
+  // determine which is brightest and move towards it
+  if (leftTargetLightSensorReading < rightTargetLightSensorReading && leftTargetLightSensorReading < centerTargetLightSensorReading) // left is brightest, turn left
+  {
+#ifdef DEBUG
+    Serial.println("left is brightest");
+#endif // DEBUG
+    turnLeft();
+    pause(twoDegrees * 10);
+  }
+  else if (rightTargetLightSensorReading < leftTargetLightSensorReading && rightTargetLightSensorReading < centerTargetLightSensorReading) // right is brightest, turn right
+  {
+#ifdef DEBUG
+    Serial.println("right is brightest");
+#endif // DEBUG
+    turnRight();
+    pause(twoDegrees * 10);
+  }
+  else // otherwise move forward
+  {
+#ifdef DEBUG
+    Serial.println("center is brightest");
+#endif // DEBUG
+    forward();
+    pause(oneInch * 4);
+  }
+
+#ifdef DEBUG
+  Serial.println("\n");
+#endif // DEBUG
+  */
 }
 
 /***** SUBROUTINES *****/
