@@ -66,7 +66,6 @@ unsigned int readNavLightSensor()
   return readADC(navLightSensor);  
 }
 
-
 void setup() 
 {
   configArduino();
@@ -90,20 +89,19 @@ void testSensor(byte sensor)
 
 void loop()
 {
-  unsigned int currentSide = 41324232;
+  unsigned int currentSide = 34324;
   if (startingSide != currentSide)
   {
-    unsigned int degreesRotated = 0;
-	  unsigned int bestNavLightSensorReadingAngle = 0;	// angle to rotate back to once the "best"/brightest
-														// angle has been found
+  
+    unsigned int rotationTime = 0; // milliseconds we have rotated so far
+	  unsigned int bestRotationTime = 0;
 	  unsigned int bestNavLightSensorReading = readNavLightSensor(); // "best"/brightest nav light sensor found so far
-	  while (degreesRotated < 360)
+	  while (rotationTime < 2000) // rotate for 2 seconds
 	  {
 		  turnLeft();
-		  pause(twoDegrees);
-		  halt();
-		  pause(5);
-		  degreesRotated += 2;
+		  pause(20);
+		  
+		  rotationTime += 20;
 		
 		  unsigned int newNavLightSensorReading = readNavLightSensor();
 #ifdef DEBUG
@@ -119,17 +117,17 @@ void loop()
 			  Serial.println(bestNavLightSensorReading);
 #endif // DEBUG
 			  bestNavLightSensorReading = newNavLightSensorReading;
-			  bestNavLightSensorReadingAngle = degreesRotated;
+			  bestRotationTime = rotationTime;
 		  }
 	}
-	turnLeft();
-	pause(bestNavLightSensorReadingAngle / 2 * twoDegrees);
+	turnRight();
+	pause(rotationTime - bestRotationTime);
  
 #ifdef DEBUG
-	Serial.print("bestNavLightSensorReadingAngle = ");
-	Serial.println(bestNavLightSensorReadingAngle);
-	Serial.print("degreesRotated = ");
-	Serial.println(degreesRotated);
+	Serial.print("bsetrotationtime = ");
+	Serial.println(bestRotationTime);
+  Serial.print("current brightness = ");
+  Serial.println(readNavLightSensor());
 	Serial.println("\n\nNEXT TRIAL\n");
 	halt();
 	pause(10000);
@@ -151,6 +149,7 @@ void loop()
   Serial.print("   right reading = ");
   Serial.println(rightTargetLightSensorReading);
 #endif // DEBUG
+
 /*
   // determine which is brightest and move towards it
   if (leftTargetLightSensorReading < rightTargetLightSensorReading && leftTargetLightSensorReading < centerTargetLightSensorReading) // left is brightest, turn left
