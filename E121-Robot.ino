@@ -29,6 +29,7 @@ const unsigned int rightLightSensor = 4;
 
 /***** GLOBAL VARIABLES *****/
 static unsigned int startingSide;
+static unsigned int bestNavLightSensorReading;
 
 /*
  *  Detects current side and returns 1 for black and 0 for white
@@ -55,9 +56,45 @@ unsigned int detectCurrentSide()
   else
   {
     Serial.print("SIDE UNKNOWN\nReading: ");
+    outputHigh(10); // turn on red led
     Serial.println(fsmReading);
     Serial.println();
     return -1;
+  }
+}
+
+void rotateToNavLight()
+{
+  unsigned int navLightSensorReading = readNavLightSensor();
+  bestNavLightSensorReading = navLightSensorReading;
+  unsigned int timeRotated = 0; // time rotated so far
+  while (timeRotated < 3000) // rotate for 3 seconds
+  {
+    turnLeft();
+    pause(20);
+    timeRotated += 20;
+    navLightSensorReading = readNavLightSensor();
+    if (navLightSensorReading < bestNavLightSensorReading) // this reading is brighter than previous brightest
+    {
+      bestNavLightSensorReading = navLightSensorReading;
+    }
+  }
+
+  // to prevent the robot from rotating infinitely if it cant find a close enough brightness
+  // we increase the range after 40 tries
+  int attempts = 0;
+  int range = 50;
+  while (!isInRange(navLightSensorReading, range, bestNavLightSensorReading)) // rotate until within +-10 of brighest value
+  {
+    turnLeft();
+    pause(20);
+    navLightSensorReading = readNavLightSensor();
+    attempts++;
+    if (attempts == 40)
+    {
+      range += 300;
+      attempts = 0;
+    }
   }
 }
 
@@ -74,6 +111,7 @@ void setup()
   motors(1, 'o', 0);
   motors(2, 'o', 0);
   startingSide = detectCurrentSide(); // what is our home side?
+  rotateToNavLight();
 }
 
 #ifdef DEBUG
@@ -89,49 +127,11 @@ void testSensor(byte sensor)
 
 void loop()
 {
-  unsigned int currentSide = 34324;
-  if (startingSide != currentSide)
+  unsigned int currentSide = detectCurrentSide();
+  while (startingSide == currentSide)
   {
-  
-    unsigned int rotationTime = 0; // milliseconds we have rotated so far
-	  unsigned int bestRotationTime = 0;
-	  unsigned int bestNavLightSensorReading = readNavLightSensor(); // "best"/brightest nav light sensor found so far
-	  while (rotationTime < 2000) // rotate for 2 seconds
-	  {
-		  turnLeft();
-		  pause(20);
-		  
-		  rotationTime += 20;
-		
-		  unsigned int newNavLightSensorReading = readNavLightSensor();
-#ifdef DEBUG
-		  Serial.print("newNavLightSensorReading = ");
-		  Serial.println(newNavLightSensorReading);
-#endif // DEBUG
-		  if (newNavLightSensorReading < bestNavLightSensorReading) // is new reading brighter than previous best?
-		  {
-#ifdef DEBUG
-			  Serial.print("new best navLightSensorReading found = ");
-			  Serial.print(newNavLightSensorReading);
-			  Serial.print(" previous = ");
-			  Serial.println(bestNavLightSensorReading);
-#endif // DEBUG
-			  bestNavLightSensorReading = newNavLightSensorReading;
-			  bestRotationTime = rotationTime;
-		  }
-	}
-	turnRight();
-	pause(rotationTime - bestRotationTime);
- 
-#ifdef DEBUG
-	Serial.print("bsetrotationtime = ");
-	Serial.println(bestRotationTime);
-  Serial.print("current brightness = ");
-  Serial.println(readNavLightSensor());
-	Serial.println("\n\nNEXT TRIAL\n");
-	halt();
-	pause(10000);
-#endif // DEBUG
+    forward();
+    pause(oneInch * 4);
   }
 
   // we are now on the enemy's side
@@ -150,7 +150,6 @@ void loop()
   Serial.println(rightTargetLightSensorReading);
 #endif // DEBUG
 
-/*
   // determine which is brightest and move towards it
   if (leftTargetLightSensorReading < rightTargetLightSensorReading && leftTargetLightSensorReading < centerTargetLightSensorReading) // left is brightest, turn left
   {
@@ -180,10 +179,18 @@ void loop()
 #ifdef DEBUG
   Serial.println("\n");
 #endif // DEBUG
-  */
 }
 
 /***** SUBROUTINES *****/
+
+/* Returns true of num is in [center - R, center + R] */
+// num = num to check
+// R = range
+// center = center
+bool isInRange(int num, int R, int center) 
+{
+  return ((num > center && num < center + R) || (num < center && num > center - R));
+}
 
 /***** MOVEMENT SUBROUTINES *****/
 
@@ -249,30 +256,21 @@ void handleInterrupt()
   while((leftBumperStat = readInput(leftBumper)) == 0 || (rightBumperStat = readInput(rightBumper)) == 0)
   {
     backward();
-    pause(oneInch * 4); // move back 4 inches
+    pause(oneInch * 2); // move back 2 inches
 
-    // now rotate depending on bumper hit 45 degrees
+    // now rotate depending on bumper hit 10 degrees
     if (leftBumperStat == 0)
     {
       turnRight();
-      pause(twoDegrees * 15);
+      pause(twoDegrees * 5);
       Serial.println("left bumper hit");
     }
     else if (rightBumperStat == 0)
     {
       turnLeft();
-      pause(twoDegrees * 15);
+      pause(twoDegrees * 5);
       Serial.println("right bumper hit");
     }
-#ifdef DEBUG
-    else // not sure what this status would mean if the interrupt triggered
-    {
-      Serial.print("handleInterrupt() branches of rotation fell through. leftBumperStat = ");
-      Serial.print(leftBumperStat);
-      Serial.print(" rightBumperStat = ");
-      Serial.println(rightBumperStat);
-    }
-#endif // DEBUG
   }
 }
 
