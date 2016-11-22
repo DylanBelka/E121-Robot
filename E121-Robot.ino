@@ -29,7 +29,6 @@ const unsigned int rightLightSensor = 4;
 
 /***** GLOBAL VARIABLES *****/
 static unsigned int startingSide;
-static unsigned int bestNavLightSensorReading;
 
 /*
  *  Detects current side and returns 1 for black and 0 for white
@@ -66,7 +65,7 @@ unsigned int detectCurrentSide()
 void rotateToNavLight()
 {
   unsigned int navLightSensorReading = readNavLightSensor();
-  bestNavLightSensorReading = navLightSensorReading;
+  unsigned int bestNavLightSensorReading = navLightSensorReading;
   unsigned int timeRotated = 0; // time rotated so far
   while (timeRotated < 3000) // rotate for 3 seconds
   {
