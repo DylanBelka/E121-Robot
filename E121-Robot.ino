@@ -18,7 +18,7 @@ const unsigned int sideBlack = 1;
 // values approximated by moving/rotating and measuring approx how far the robot moved/rotated in 1 second
 const unsigned int oneFoot = 1400; // 1 foot ~ 1400ms of movement
 const unsigned int oneInch = (oneFoot / 12);
-const unsigned int twoDegrees = 7; // two degrees = 7 milliseconds (one degree ~ 3.5 millis)
+const unsigned int twoDegrees = 7;
 
 const unsigned int fsmLEDPin = 8;
 const unsigned int fsmSensorPin = 3;
@@ -29,6 +29,7 @@ const unsigned int rightLightSensor = 4;
 
 /***** GLOBAL VARIABLES *****/
 static unsigned int startingSide;
+static unsigned int cross;
 
 /*
  *  Detects current side and returns 1 for black and 0 for white
@@ -38,18 +39,22 @@ unsigned int detectCurrentSide()
 {
   const int sideWhiteLow = 3000;  // lower bound of white side values
   const int sideWhiteHigh = 5000; // upper bound
-  const int sideBlackLow = 15000;
-  const int sideBlackHigh = 18000;
+  const int sideBlackLow = 17000;
+  const int sideBlackHigh = 22000;
 
   outputHigh(fsmLEDPin);
   pause(100);
   unsigned int fsmReading = readADC(fsmSensorPin);
-  if (fsmReading > sideWhiteLow && fsmReading < sideWhiteHigh) // white side?
+  if (fsmReading < 7500) // white side?
   {
+    outputHigh(11);
+    outputLow(10);
     return sideWhite;
   }
-  else if (fsmReading > sideBlackLow && fsmReading < sideBlackHigh) // black side?
+  else if (fsmReading > 7500) // black side?
   {
+    outputHigh(10);
+    outputLow(11);
     return sideBlack;
   }
   else
@@ -78,12 +83,15 @@ void rotateToNavLight()
       bestNavLightSensorReading = navLightSensorReading;
     }
   }
+  
+  halt();
+  pause(100);
 
   // to prevent the robot from rotating infinitely if it cant find a close enough brightness
   // we increase the range after 40 tries
   int attempts = 0;
   int range = 50;
-  while (!isInRange(navLightSensorReading, range, bestNavLightSensorReading)) // rotate until within +-10 of brighest value
+  while (!isInRange(navLightSensorReading, range, bestNavLightSensorReading)) // rotate until within +-range of brighest value
   {
     turnLeft();
     pause(20);
@@ -91,10 +99,12 @@ void rotateToNavLight()
     attempts++;
     if (attempts == 40)
     {
-      range += 300;
+      range += 100;
       attempts = 0;
     }
   }
+  halt();
+  pause(100);
 }
 
 unsigned int readNavLightSensor()
@@ -113,17 +123,6 @@ void setup()
   rotateToNavLight();
 }
 
-#ifdef DEBUG
-void testSensor(byte sensor)
-{
-  unsigned int sensorVal = readADC(sensor);
-  Serial.print("sensor #");
-  Serial.print(sensor);
-  Serial.print(" ");
-  Serial.println(sensorVal);
-}
-#endif // DEBUG
-
 void loop()
 {
   unsigned int currentSide = detectCurrentSide();
@@ -131,7 +130,16 @@ void loop()
   {
     forward();
     pause(oneInch * 4);
+    currentSide = detectCurrentSide();
   }
+  cross++;
+  if (cross == 1)
+  {
+    forward();
+    pause(oneInch * 10);
+  }
+  
+  
 
   // we are now on the enemy's side
   // move toward target light
@@ -139,45 +147,23 @@ void loop()
   unsigned int leftTargetLightSensorReading = readADC(leftLightSensor);
   unsigned int rightTargetLightSensorReading = readADC(rightLightSensor);
   unsigned int centerTargetLightSensorReading = readADC(centerLightSensor);
-
-#ifdef DEBUG
-  Serial.print("center reading = ");
-  Serial.print(centerTargetLightSensorReading);
-  Serial.print("   left reading = ");
-  Serial.print(leftTargetLightSensorReading);
-  Serial.print("   right reading = ");
-  Serial.println(rightTargetLightSensorReading);
-#endif // DEBUG
-
+  
   // determine which is brightest and move towards it
   if (leftTargetLightSensorReading < rightTargetLightSensorReading && leftTargetLightSensorReading < centerTargetLightSensorReading) // left is brightest, turn left
   {
-#ifdef DEBUG
-    Serial.println("left is brightest");
-#endif // DEBUG
     turnLeft();
     pause(twoDegrees * 10);
   }
   else if (rightTargetLightSensorReading < leftTargetLightSensorReading && rightTargetLightSensorReading < centerTargetLightSensorReading) // right is brightest, turn right
   {
-#ifdef DEBUG
-    Serial.println("right is brightest");
-#endif // DEBUG
     turnRight();
     pause(twoDegrees * 10);
   }
   else // otherwise move forward
   {
-#ifdef DEBUG
-    Serial.println("center is brightest");
-#endif // DEBUG
     forward();
     pause(oneInch * 4);
   }
-
-#ifdef DEBUG
-  Serial.println("\n");
-#endif // DEBUG
 }
 
 /***** SUBROUTINES *****/
@@ -256,20 +242,24 @@ void handleInterrupt()
   {
     backward();
     pause(oneInch * 2); // move back 2 inches
-
+    halt();
+    pause(100);
+    
     // now rotate depending on bumper hit 10 degrees
     if (leftBumperStat == 0)
     {
       turnRight();
-      pause(twoDegrees * 5);
-      Serial.println("left bumper hit");
+      pause(twoDegrees * 30);
     }
     else if (rightBumperStat == 0)
     {
       turnLeft();
-      pause(twoDegrees * 5);
-      Serial.println("right bumper hit");
+      pause(twoDegrees * 30);
     }
   }
+  forward();
+  pause(oneInch * 2);
+  halt();
+  pause(100);
 }
 
