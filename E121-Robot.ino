@@ -100,11 +100,12 @@ void rotateToNavLight()
     attempts++;
     if (attempts == 50)
     {
-      range += 200;
+      range += 500;
       attempts = 0;
     }
   }
-  halt();
+  bestNavLightSensorReading = navLightSensorReading;  // the best is now our "within range" best
+  halt();                                             // prevents the robot from immediatly rotating to find old best again
   pause(100);
 }
 
@@ -132,7 +133,7 @@ void loop()
     forward();
     pause(oneInch * 4);
     currentSide = detectCurrentSide();
-    if (isInRange(readNavLightSensor(), 10000, bestNavLightSensorReading))
+    if (!isInRange(readNavLightSensor(), 20000, bestNavLightSensorReading))
     {
       rotateToNavLight();
     }
@@ -252,7 +253,7 @@ void handleInterrupt()
     halt();
     pause(100);
     
-    // now rotate depending on bumper hit 10 degrees
+    // now rotate depending on bumper hit 60 degrees
     if (leftBumperStat == 0)
     {
       turnRight();
@@ -265,7 +266,7 @@ void handleInterrupt()
     }
   }
   forward();
-  pause(oneInch * 2);
+  pause(oneInch * 2); // move forward again 2 inches
   halt();
   pause(100);
 }
