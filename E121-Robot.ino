@@ -29,7 +29,8 @@ const unsigned int rightLightSensor = 4;
 
 /***** GLOBAL VARIABLES *****/
 static unsigned int startingSide;
-static unsigned int cross;
+static unsigned int timesCrossed;
+static unsigned int bestNavLightSensorReading;
 
 /*
  *  Detects current side and returns 1 for black and 0 for white
@@ -70,7 +71,7 @@ unsigned int detectCurrentSide()
 void rotateToNavLight()
 {
   unsigned int navLightSensorReading = readNavLightSensor();
-  unsigned int bestNavLightSensorReading = navLightSensorReading;
+  bestNavLightSensorReading = navLightSensorReading;
   unsigned int timeRotated = 0; // time rotated so far
   while (timeRotated < 3000) // rotate for 3 seconds
   {
@@ -97,9 +98,9 @@ void rotateToNavLight()
     pause(20);
     navLightSensorReading = readNavLightSensor();
     attempts++;
-    if (attempts == 40)
+    if (attempts == 50)
     {
-      range += 100;
+      range += 200;
       attempts = 0;
     }
   }
@@ -131,38 +132,44 @@ void loop()
     forward();
     pause(oneInch * 4);
     currentSide = detectCurrentSide();
+    if (isInRange(readNavLightSensor(), 10000, bestNavLightSensorReading))
+    {
+      rotateToNavLight();
+    }
   }
-  cross++;
-  if (cross == 1)
+  // we have now crossed, increment the counter
+  timesCrossed++;
+  if (timesCrossed == 1) // first time crossed, force a relatively long move forward
   {
     forward();
     pause(oneInch * 10);
   }
-  
-  
 
-  // we are now on the enemy's side
-  // move toward target light
-  // figure out best way to move using 3 target light sensors
-  unsigned int leftTargetLightSensorReading = readADC(leftLightSensor);
-  unsigned int rightTargetLightSensorReading = readADC(rightLightSensor);
-  unsigned int centerTargetLightSensorReading = readADC(centerLightSensor);
-  
-  // determine which is brightest and move towards it
-  if (leftTargetLightSensorReading < rightTargetLightSensorReading && leftTargetLightSensorReading < centerTargetLightSensorReading) // left is brightest, turn left
+  if (startingSide != currentSide)
   {
-    turnLeft();
-    pause(twoDegrees * 10);
-  }
-  else if (rightTargetLightSensorReading < leftTargetLightSensorReading && rightTargetLightSensorReading < centerTargetLightSensorReading) // right is brightest, turn right
-  {
-    turnRight();
-    pause(twoDegrees * 10);
-  }
-  else // otherwise move forward
-  {
-    forward();
-    pause(oneInch * 4);
+    // we are now on the enemy's side
+    // move toward target light
+    // figure out best way to move using 3 target light sensors
+    unsigned int leftTargetLightSensorReading = readADC(leftLightSensor);
+    unsigned int rightTargetLightSensorReading = readADC(rightLightSensor);
+    unsigned int centerTargetLightSensorReading = readADC(centerLightSensor);
+    
+    // determine which is brightest and move towards it
+    if (leftTargetLightSensorReading < rightTargetLightSensorReading && leftTargetLightSensorReading < centerTargetLightSensorReading) // left is brightest, turn left
+    {
+      turnLeft();
+      pause(twoDegrees * 10);
+    }
+    else if (rightTargetLightSensorReading < leftTargetLightSensorReading && rightTargetLightSensorReading < centerTargetLightSensorReading) // right is brightest, turn right
+    {
+      turnRight();
+      pause(twoDegrees * 10);
+    }
+    else // otherwise move forward
+    {
+      forward();
+      pause(oneInch * 4);
+    }
   }
 }
 
