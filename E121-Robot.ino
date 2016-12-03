@@ -2,6 +2,7 @@
 #include <ArduinoInit.h>
 
 #define DEBUG
+#undef DEBUG
 
 /***** CONSTANTS ******/
 
@@ -32,88 +33,6 @@ static unsigned int startingSide;
 static unsigned int timesCrossed;
 static unsigned int bestNavLightSensorReading;
 
-/*
- *  Detects current side and returns 1 for black and 0 for white
- *  returns -1 if the returned light value is not within range and prints val
- */
-unsigned int detectCurrentSide()
-{
-  const int sideWhiteLow = 3000;  // lower bound of white side values
-  const int sideWhiteHigh = 5000; // upper bound
-  const int sideBlackLow = 17000;
-  const int sideBlackHigh = 22000;
-
-  outputHigh(fsmLEDPin);
-  pause(100);
-  unsigned int fsmReading = readADC(fsmSensorPin);
-  if (fsmReading < 7500) // white side?
-  {
-    outputHigh(11);
-    outputLow(10);
-    return sideWhite;
-  }
-  else if (fsmReading > 7500) // black side?
-  {
-    outputHigh(10);
-    outputLow(11);
-    return sideBlack;
-  }
-  else
-  {
-    Serial.print("SIDE UNKNOWN\nReading: ");
-    outputHigh(10); // turn on red led
-    Serial.println(fsmReading);
-    Serial.println();
-    return -1;
-  }
-}
-
-void rotateToNavLight()
-{
-  unsigned int navLightSensorReading = readNavLightSensor();
-  bestNavLightSensorReading = navLightSensorReading;
-  unsigned int timeRotated = 0; // time rotated so far
-  while (timeRotated < 3000) // rotate for 3 seconds
-  {
-    turnLeft();
-    pause(20);
-    timeRotated += 20;
-    navLightSensorReading = readNavLightSensor();
-    if (navLightSensorReading < bestNavLightSensorReading) // this reading is brighter than previous brightest
-    {
-      bestNavLightSensorReading = navLightSensorReading;
-    }
-  }
-  
-  halt();
-  pause(100);
-
-  // to prevent the robot from rotating infinitely if it cant find a close enough brightness
-  // we increase the range after 40 tries
-  int attempts = 0;
-  int range = 50;
-  while (!isInRange(navLightSensorReading, range, bestNavLightSensorReading)) // rotate until within +-range of brighest value
-  {
-    turnLeft();
-    pause(20);
-    navLightSensorReading = readNavLightSensor();
-    attempts++;
-    if (attempts == 50)
-    {
-      range += 500;
-      attempts = 0;
-    }
-  }
-  bestNavLightSensorReading = navLightSensorReading;  // the best is now our "within range" best
-  halt();                                             // prevents the robot from immediatly rotating to find old best again
-  pause(100);
-}
-
-unsigned int readNavLightSensor()
-{
-  return readADC(navLightSensor);  
-}
-
 void setup() 
 {
   configArduino();
@@ -122,7 +41,7 @@ void setup()
   motors(1, 'o', 0);
   motors(2, 'o', 0);
   startingSide = detectCurrentSide(); // what is our home side?
-  rotateToNavLight();
+  findNavLight(); // find the brightest value of the nav light/ find nav light
 }
 
 void loop()
@@ -130,13 +49,17 @@ void loop()
   unsigned int currentSide = detectCurrentSide();
   while (startingSide == currentSide)
   {
-    forward();
-    pause(oneInch * 4);
-    currentSide = detectCurrentSide();
-    if (!isInRange(readNavLightSensor(), 20000, bestNavLightSensorReading))
+    if (readNavLightSensor() > bestNavLightSensorReading + 5000)
     {
-      rotateToNavLight();
+      turnLeft();
+      pause(twoDegrees * 5);
     }
+    else
+    {
+      forward();
+      pause(oneInch * 4);
+    }
+    currentSide = detectCurrentSide();
   }
   // we have now crossed, increment the counter
   timesCrossed++;
@@ -183,6 +106,65 @@ void loop()
 bool isInRange(int num, int R, int center) 
 {
   return ((num > center && num < center + R) || (num < center && num > center - R));
+}
+
+/*
+ *  Detects current side and returns 1 for black and 0 for white
+ *  returns -1 if the returned light value is not within range and prints val
+ */
+unsigned int detectCurrentSide()
+{
+  const int sideWhiteLow = 3000;  // lower bound of white side values
+  const int sideWhiteHigh = 5000; // upper bound
+  const int sideBlackLow = 17000;
+  const int sideBlackHigh = 22000;
+
+  outputHigh(fsmLEDPin);
+  pause(100);
+  unsigned int fsmReading = readADC(fsmSensorPin);
+  if (fsmReading < 7500) // white side?
+  {
+    outputHigh(11);
+    outputLow(10);
+    return sideWhite;
+  }
+  else if (fsmReading > 7500) // black side?
+  {
+    outputHigh(10);
+    outputLow(11);
+    return sideBlack;
+  }
+  else
+  {
+    Serial.print("SIDE UNKNOWN\nReading: ");
+    outputHigh(10); // turn on red led
+    Serial.println(fsmReading);
+    Serial.println();
+    return -1;
+  }
+}
+
+void findNavLight()
+{
+  unsigned int navLightSensorReading = readNavLightSensor();
+  bestNavLightSensorReading = navLightSensorReading;
+  unsigned int timeRotated = 0; // time rotated so far
+  while (timeRotated < 3000) // rotate for 3 seconds
+  {
+    turnLeft();
+    pause(20);
+    timeRotated += 20;
+    navLightSensorReading = readNavLightSensor();
+    if (navLightSensorReading < bestNavLightSensorReading) // this reading is brighter than previous brightest
+    {
+      bestNavLightSensorReading = navLightSensorReading;
+    }
+  }
+}
+
+unsigned int readNavLightSensor()
+{
+  return readADC(navLightSensor);  
 }
 
 /***** MOVEMENT SUBROUTINES *****/
